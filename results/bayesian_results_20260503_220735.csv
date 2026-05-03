@@ -1,0 +1,17 @@
+Algorithm,Parameters,Mean Guesses,Case 3 Freq (%),Max Drift (N),Time (s)
+Bayesian Search,{'quantile': 0.75},61.18,25.0,15678,35.4038
+Bayesian Search,{'quantile': 0.76},59.07,23.75,13496,33.5091
+Bayesian Search,{'quantile': 0.77},58.94,22.85,14070,33.5003
+Bayesian Search,{'quantile': 0.78},57.87,21.5,12420,32.5485
+Bayesian Search,{'quantile': 0.79},59.1,20.66,13099,32.0539
+Bayesian Search,{'quantile': 0.8},57.84,19.46,11488,30.9327
+Bayesian Search,{'quantile': 0.81},56.98,18.56,13932,29.9307
+Bayesian Search,{'quantile': 0.82},56.85,17.2,6007,28.9933
+Bayesian Search,{'quantile': 0.83},57.37,16.42,11849,28.6233
+Bayesian Search,{'quantile': 0.84},59.09,15.28,6348,29.1169
+Bayesian Search,{'quantile': 0.85},57.0,14.0,5848,27.1626
+Bayesian Search,{'quantile': 0.86},59.36,13.22,5489,27.8783
+Bayesian Search,{'quantile': 0.87},58.52,12.25,5762,26.9382
+Bayesian Search,{'quantile': 0.88},60.17,11.26,4972,27.1691
+Bayesian Search,{'quantile': 0.89},61.65,10.26,4493,27.2243
+Bayesian Search,{'quantile': 0.9},60.46,9.09,4236,26.075

@@ -2,6 +2,7 @@ import random
 from tqdm import tqdm
 import time
 import csv
+from datetime import datetime
 
 
 # ==========================================
@@ -186,38 +187,41 @@ def run_experiment(algorithm_name, func, trials=1000, use_tqdm=False, **kwargs):
 
 
 if __name__ == "__main__":
-    print("Initializing WQF7004 Number Search Sandbox...\n")
-    TRIALS = 2000
+    for i in range(10):
+        print("Initializing WQF7004 Number Search Sandbox...\n")
+        TRIALS = 2000
 
-    # 1. Run Baseline
-    run_experiment("Binary Baseline", binary_baseline_search, trials=TRIALS)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    skew_results = []
-    bayesian_results = []
-    csv_headers = ["Algorithm", "Parameters", "Mean Guesses", "Case 3 Freq (%)", "Max Drift (N)", "Time (s)"]
+        # 1. Run Baseline
+        run_experiment("Binary Baseline", binary_baseline_search, trials=TRIALS)
 
-    # 2. Parameter Sweep for Risk-Optimized Skew
-    print("\nStarting Parameter Sweep for Skew Search...")
-    test_alphas = [a / 100 for a in range(60, 91)]
-    for a in test_alphas:
-        res = run_experiment("Risk-Optimized Skew", risk_optimized_skew_search, trials=TRIALS, alpha=a)
-        skew_results.append(res)
+        skew_results = []
+        bayesian_results = []
+        csv_headers = ["Algorithm", "Parameters", "Mean Guesses", "Case 3 Freq (%)", "Max Drift (N)", "Time (s)"]
 
-    with open('skew_results.csv', 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=csv_headers)
-        writer.writeheader()
-        writer.writerows(skew_results)
-    print("\n>>> Saved skew_results.csv")
+        # 2. Parameter Sweep for Risk-Optimized Skew
+        print("\nStarting Parameter Sweep for Skew Search...")
+        test_alphas = [a / 100 for a in range(60, 91)]
+        for a in test_alphas:
+            res = run_experiment("Risk-Optimized Skew", risk_optimized_skew_search, trials=TRIALS, alpha=a)
+            skew_results.append(res)
 
-    # 3. Parameter Sweep for Bayesian Probabilistic Search
-    print("\nStarting Parameter Sweep for Bayesian Search...")
-    test_quantiles = [q / 100 for q in range(75, 91)]
-    for q in test_quantiles:
-        res = run_experiment("Bayesian Search", bayesian_probabilistic_search, trials=TRIALS, use_tqdm=True, quantile=q)
-        bayesian_results.append(res)
+        with open(f'./results/skew_results_{timestamp}.csv', 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=csv_headers)
+            writer.writeheader()
+            writer.writerows(skew_results)
+        print("\n>>> Saved skew_results.csv")
 
-    with open('bayesian_results.csv', 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=csv_headers)
-        writer.writeheader()
-        writer.writerows(bayesian_results)
-    print("\n>>> Saved bayesian_results.csv")
+        # 3. Parameter Sweep for Bayesian Probabilistic Search
+        print("\nStarting Parameter Sweep for Bayesian Search...")
+        test_quantiles = [q / 100 for q in range(75, 91)]
+        for q in test_quantiles:
+            res = run_experiment("Bayesian Search", bayesian_probabilistic_search, trials=TRIALS, use_tqdm=True, quantile=q)
+            bayesian_results.append(res)
+
+        with open(f'./results/bayesian_results_{timestamp}.csv', 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=csv_headers)
+            writer.writeheader()
+            writer.writerows(bayesian_results)
+        print("\n>>> Saved bayesian_results.csv")
