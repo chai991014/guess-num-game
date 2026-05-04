@@ -9,125 +9,109 @@ from datetime import datetime
 # 1. SEARCH ALGORITHMS
 # ==========================================
 
-def binary_baseline_search():
-    """Standard Binary Search (50% split) for baseline comparison."""
-    n = random.randint(1, 1000)
+def asymmetric_heuristic_search(alpha):
+    """
+    Baseline: Asymmetric Heuristic Search (AHS)
+    Rooted in Adaptive Binary Search with Asymmetric Costs.
+    """
+    n_initial = random.randint(1, 1000)
+    p_fixed = random.randint(1, 200)  # P is rolled ONCE per game
+
+    n_current = n_initial
     low, high = 1, 1000
     guesses = 0
     case3_count = 0
 
     while True:
         guesses += 1
-        guess = low + (high - low) // 2
 
-        if guess == n:
-            return guesses, case3_count, n
-        elif guess > n:
-            high = guess - 1
-        else:
-            low = guess + 1
-            n += random.randint(1, 200)
-            high += 200
-            case3_count += 1
-
-
-def risk_optimized_skew_search(alpha):
-    """Unified Search using a Skew Factor (alpha) to avoid Case 3."""
-    n = random.randint(1, 1000)
-    low, high = 1, 1000
-    guesses = 0
-    case3_count = 0
-
-    while True:
-        guesses += 1
-        # Skew the guess towards the upper bound
+        # Asymmetric guess based on alpha
         guess = low + int(alpha * (high - low))
 
-        if guess == n:
-            return guesses, case3_count, n
-        elif guess > n:
+        if guess == n_current:
+            return guesses, case3_count, n_current
+
+        elif guess > n_current:
+            # Case 2: Too High (-) -> Target does not move
             high = guess - 1
+
         else:
+            # Case 3: Too Low (+) -> Target moves by FIXED P
             low = guess + 1
-            n += random.randint(1, 200)
+            n_current += p_fixed
             high += 200
             case3_count += 1
 
+        # Failsafe to prevent infinite loops (Death Spiral)
+        if guesses > 3000:
+            return guesses, case3_count, n_current
 
-def bayesian_probabilistic_search(quantile):
-    """Belief-based search using a probability distribution and stochastic shifts."""
-    n = random.randint(1, 1000)
-    max_horizon = 6000  # Max possible N to prevent array index out of bounds
-    probs = [0.0] * max_horizon
 
-    # Initialize uniform prior for 1 to 1000
-    for i in range(1, 1001):
-        probs[i] = 1.0 / 1000.0
+def constraint_based_version_space_search(quantile):
+    """
+    Main Solution: Constraint-Based Version Space Search (CB-VSS).
+    Uses Candidate Elimination to prune a hypothesis space of (N0, P).
+    """
+    n_initial = random.randint(1, 1000)
+    p_fixed = random.randint(1, 200)  # P is rolled ONCE per game
 
+    n_current = n_initial
     guesses = 0
     case3_count = 0
 
-    while guesses < 200:
+    max_p = 200
+    max_n_limit = 15000  # Safe upper bound
+
+    # Initialize Feasible Set: dictionary mapping 'P' to a set of possible 'N's
+    feasible_n_for_p = {p: set(range(1, 1001)) for p in range(1, max_p + 1)}
+
+    while True:
         guesses += 1
 
-        # Determine guess based on cumulative probability and target quantile
-        cum_prob = 0.0
-        guess = max_horizon // 2
-        for i in range(1, max_horizon):
-            cum_prob += probs[i]
-            if cum_prob >= quantile:
-                guess = i
-                break
+        # 1. Pool all currently possible N values across all valid P's
+        all_feasible_n = []
+        for p in range(1, max_p + 1):
+            all_feasible_n.extend(feasible_n_for_p[p])
 
-        if guess == n:
-            return guesses, case3_count, n
+        if not all_feasible_n:
+            # Absolute failsafe if set collapses completely
+            guess = 500
+        else:
+            all_feasible_n.sort()
 
-        elif guess > n:
-            # Case 2: Zero out impossible high values
-            for i in range(guess, max_horizon):
-                probs[i] = 0.0
+            # 2. Select guess based on the Target Quantile
+            target_idx = int(len(all_feasible_n) * quantile)
+            if target_idx >= len(all_feasible_n):
+                target_idx = len(all_feasible_n) - 1
+            guess = all_feasible_n[target_idx]
 
-            # Renormalize distribution
-            total_prob = sum(probs)
-            if total_prob > 0:
-                probs = [p / total_prob for p in probs]
-            else:
-                # Fallback if distribution collapses
-                probs = [1.0 / guess if i < guess else 0.0 for i in range(max_horizon)]
+        # 3. Evaluate Guess and Update Constraints
+        if guess == n_current:
+            return guesses, case3_count, n_current
+
+        elif guess > n_current:
+            # Case 2: Too High (-) -> Eliminate all N >= guess
+            for p in range(1, max_p + 1):
+                feasible_n_for_p[p] = {n for n in feasible_n_for_p[p] if n < guess}
 
         else:
-            # Case 3: N increases by P
+            # Case 3: Too Low (+) -> Shift Target
+            n_current += p_fixed
             case3_count += 1
-            n += random.randint(1, 200)
 
-            # Zero out impossible low values
-            for i in range(0, guess + 1):
-                probs[i] = 0.0
+            # Eliminate all N <= guess, then shift survivors right by P
+            for p in range(1, max_p + 1):
+                new_set = set()
+                for n in feasible_n_for_p[p]:
+                    if n > guess:
+                        shifted_n = n + p
+                        if shifted_n <= max_n_limit:
+                            new_set.add(shifted_n)
+                feasible_n_for_p[p] = new_set
 
-            # Perform stochastic shift (discrete convolution with uniform P)
-            # Using a sliding window sum for O(N) performance without external libraries
-            new_probs = [0.0] * max_horizon
-            window_sum = 0.0
-            for i in range(max_horizon):
-                if i >= 1:
-                    window_sum += probs[i - 1]
-                if i >= 201:
-                    window_sum -= probs[i - 201]
-
-                window_sum = max(0.0, window_sum)
-                new_probs[i] = window_sum / 200.0
-
-            probs = new_probs
-
-            # Renormalize distribution
-            total_prob = sum(probs)
-            if total_prob > 0:
-                probs = [p / total_prob for p in probs]
-            else:
-                # Fallback if distribution collapses
-                probs = [1.0 / max_horizon] * max_horizon
-
-    return guesses, case3_count, n
+        # Failsafe
+        if guesses > 3000:
+            return guesses, case3_count, n_current
 
 
 # ==========================================
@@ -139,33 +123,33 @@ def run_experiment(algorithm_name, func, trials=1000, use_tqdm=False, **kwargs):
     total_guesses = 0
     total_case3 = 0
     max_n_reached = 0
+    death_spiral_count = 0
 
-    # Format the progress bar label
     desc = f"{algorithm_name}"
     if kwargs:
         desc += f" {kwargs}"
 
-    # Conditionally wrap the range() with tqdm
     loop_iterator = tqdm(range(trials), desc=desc, ncols=100, leave=False) if use_tqdm else range(trials)
 
     start_time = time.time()
 
     for _ in loop_iterator:
-        if kwargs:
-            guesses, case3, final_n = func(**kwargs)
-        else:
-            guesses, case3, final_n = func()
+        guesses, case3, final_n = func(**kwargs)
 
         total_guesses += guesses
         total_case3 += case3
         if final_n > max_n_reached:
             max_n_reached = final_n
 
+        if guesses > 3000:
+            death_spiral_count += 1
+
     end_time = time.time()
     elapsed_time = end_time - start_time
 
     mean_guesses = total_guesses / trials
     case3_freq = (total_case3 / total_guesses) * 100
+    death_spiral_rate = (death_spiral_count / trials) * 100
 
     print(f"--- {algorithm_name} ---")
     if kwargs:
@@ -173,55 +157,54 @@ def run_experiment(algorithm_name, func, trials=1000, use_tqdm=False, **kwargs):
     print(f"Mean Guesses   : {mean_guesses:.2f}")
     print(f"Case 3 Freq    : {case3_freq:.2f}%")
     print(f"Max Drift (N)  : {max_n_reached}")
+    print(f"Death Spirals  : {death_spiral_rate:.2f}%")
     print(f"Time Taken     : {elapsed_time:.4f}s")
     print("-" * 30)
 
     return {
         "Algorithm": algorithm_name,
-        "Parameters": str(kwargs) if kwargs else "None",
+        "Parameters": str(kwargs),
         "Mean Guesses": round(mean_guesses, 2),
         "Case 3 Freq (%)": round(case3_freq, 2),
         "Max Drift (N)": max_n_reached,
+        "Death Spiral Rate (%)": round(death_spiral_rate, 2),
         "Time (s)": round(elapsed_time, 4)
     }
 
 
 if __name__ == "__main__":
-    for i in range(10):
-        print("Initializing WQF7004 Number Search Sandbox...\n")
-        TRIALS = 2000
+    TRIALS = 2000
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_headers = ["Algorithm", "Parameters", "Mean Guesses", "Case 3 Freq (%)", "Max Drift (N)", "Death Spiral Rate (%)", "Time (s)"]
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # --- 1. Asymmetric Heuristic Search Parameter Sweep ---
+    ahs_results = []
+    print("\nStarting Parameter Sweep for Asymmetric Heuristic Search...")
+    test_alphas = [a / 100 for a in range(50, 100)]
 
-        # 1. Run Baseline
-        run_experiment("Binary Baseline", binary_baseline_search, trials=TRIALS)
+    for a in test_alphas:
+        res = run_experiment("Asymmetric Heuristic Search (AHS)", asymmetric_heuristic_search, trials=TRIALS, alpha=a)
+        ahs_results.append(res)
 
-        skew_results = []
-        bayesian_results = []
-        csv_headers = ["Algorithm", "Parameters", "Mean Guesses", "Case 3 Freq (%)", "Max Drift (N)", "Time (s)"]
+    with open(f'./results/ahs_sweep_{timestamp}.csv', 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=csv_headers)
+        writer.writeheader()
+        writer.writerows(ahs_results)
+    print(f">>> Saved ahs_sweep_{timestamp}.csv\n")
 
-        # 2. Parameter Sweep for Risk-Optimized Skew
-        print("\nStarting Parameter Sweep for Skew Search...")
-        test_alphas = [a / 100 for a in range(60, 91)]
-        for a in test_alphas:
-            res = run_experiment("Risk-Optimized Skew", risk_optimized_skew_search, trials=TRIALS, alpha=a)
-            skew_results.append(res)
+    # --- 2. Constraint-Based Version Space Search Parameter Sweep ---
+    vss_results = []
+    print("\nStarting Parameter Sweep for Constraint-Based Version Space Search...")
+    test_quantiles = [q / 100 for q in range(40, 96, 5)]
 
-        with open(f'./results/skew_results_{timestamp}.csv', 'w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=csv_headers)
-            writer.writeheader()
-            writer.writerows(skew_results)
-        print("\n>>> Saved skew_results.csv")
+    for q in test_quantiles:
+        res = run_experiment("Constraint-Based Version Space Search (CB-VSS)", constraint_based_version_space_search, trials=TRIALS, use_tqdm=True, quantile=q)
+        vss_results.append(res)
 
-        # 3. Parameter Sweep for Bayesian Probabilistic Search
-        print("\nStarting Parameter Sweep for Bayesian Search...")
-        test_quantiles = [q / 100 for q in range(75, 91)]
-        for q in test_quantiles:
-            res = run_experiment("Bayesian Search", bayesian_probabilistic_search, trials=TRIALS, use_tqdm=True, quantile=q)
-            bayesian_results.append(res)
+    with open(f'./results/vss_sweep_{timestamp}.csv', 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=csv_headers)
+        writer.writeheader()
+        writer.writerows(vss_results)
+    print(f">>> Saved vss_sweep_{timestamp}.csv")
 
-        with open(f'./results/bayesian_results_{timestamp}.csv', 'w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=csv_headers)
-            writer.writeheader()
-            writer.writerows(bayesian_results)
-        print("\n>>> Saved bayesian_results.csv")
+    print("\nSandbox execution complete. Review the CSV files to select optimal parameters.")

@@ -1,0 +1,13 @@
+Algorithm,Parameters,Mean Guesses,Case 3 Freq (%),Max Drift (N),Death Spiral Rate (%),Time (s)
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.4},14.98,56.47,4447,0.0,66.2911
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.45},14.5,51.24,3941,0.0,65.6972
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.5},14.3,45.77,3699,0.0,58.027
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.55},14.26,41.35,3271,0.0,59.3316
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.6},14.57,36.34,2928,0.0,62.3341
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.65},15.07,31.84,2711,0.0,60.0524
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.7},15.54,27.03,2799,0.0,65.3614
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.75},16.99,21.81,2190,0.0,68.5054
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.8},18.97,17.09,2175,0.0,79.0712
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.85},21.31,13.09,1968,0.0,93.6123
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.9},27.73,8.22,1900,0.0,126.0469
+Constraint-Based Version Space Search (CB-VSS),{'quantile': 0.95},42.57,3.92,1564,0.0,227.6316
